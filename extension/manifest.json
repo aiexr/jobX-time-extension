@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "JobX Timesheet Hours",
+  "version": "0.1.0",
+  "description": "Visualize total hours per day in a 2-week bar graph for JobX timesheets.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "JobX Timesheet Hours"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.studentemployment.ngwebsolutions.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.studentemployment.ngwebsolutions.com/tsx_stumanagetimesheet.aspx*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
