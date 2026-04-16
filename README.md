@@ -16,7 +16,7 @@ JobX is a student employment timesheet platform by NGWebSolutions, used by many 
 
 ## Installation
 
-1. Download the `extension` folder from this repository
+1. [Download](https://github.com/aiexr/jobX-time-extension/releases) the `extension` folder from this repository 
 2. Open `chrome://extensions` (or `edge://extensions`)
 3. Enable **Developer mode** (top right toggle)
 4. Click **Load unpacked** and select the repo folder
