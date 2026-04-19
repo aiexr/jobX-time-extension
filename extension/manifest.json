@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "JobX Timesheet Hours",
-  "version": "0.1.0",
-  "description": "Visualize total hours per day in a 2-week bar graph for JobX timesheets.",
+  "version": "0.2.0",
+  "description": "Track JobX timesheet hours across multiple jobs with a 2-week chart, totals, and saved timesheets.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "JobX Timesheet Hours",
