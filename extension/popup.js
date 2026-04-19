@@ -34,7 +34,8 @@ function render(data) {
   summaryEl.textContent = `${formatHours(total)} total · ${workedDays} day${workedDays === 1 ? '' : 's'} worked · avg ${formatHours(total / Math.max(workedDays, 1))}/day`;
 
   chartEl.innerHTML = '';
-  for (const d of days) {
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
     const totalPct = Math.max(0, Math.min(100, (d.hours / maxHours) * 100));
     const el = document.createElement('div');
     el.className = 'day' + (d.key === today ? ' today' : '');
@@ -59,6 +60,18 @@ function render(data) {
       <div class="label">${d.label}</div>
     `;
     chartEl.appendChild(el);
+
+    // Insert weekly subtotal after every 7 days
+    if ((i + 1) % 7 === 0) {
+      const weekDays = days.slice(i - 6, i + 1);
+      const weekTotal = weekDays.reduce((s, wd) => s + wd.hours, 0);
+      const weekWorked = weekDays.filter(wd => wd.hours > 0).length;
+      const weekEl = document.createElement('div');
+      weekEl.className = 'week-total';
+      weekEl.innerHTML = `<span class="week-total-hours">${formatHours(weekTotal)}</span> this week` +
+        (weekWorked > 0 ? ` · ${weekWorked} day${weekWorked === 1 ? '' : 's'}` : '');
+      chartEl.appendChild(weekEl);
+    }
   }
 }
 

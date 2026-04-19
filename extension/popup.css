@@ -101,6 +101,27 @@ h1 {
   font-weight: 600;
 }
 
+.week-total {
+  grid-column: 1 / -1;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 2px 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.week-total:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.week-total-hours {
+  font-weight: 600;
+  color: var(--fg);
+}
+
 .status {
   padding: 8px 16px 12px;
   color: var(--muted);
