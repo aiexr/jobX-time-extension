@@ -39,6 +39,14 @@ h1 {
   font-size: 12px;
 }
 
+.job-title {
+  display: none;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg);
+}
+
 .chart {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

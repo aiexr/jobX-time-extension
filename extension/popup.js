@@ -161,11 +161,11 @@ function mergeTimesheets(currentResp, timesheets, currentTsId) {
 function renderLegend(jobSummaries) {
   const legendEl = document.getElementById('legend');
   if (!legendEl) return;
-  if (jobSummaries.length <= 1) {
+  if (jobSummaries.length === 0) {
     legendEl.style.display = 'none';
     return;
   }
-  legendEl.style.display = '';
+  legendEl.style.display = 'block';
   legendEl.innerHTML = jobSummaries.map(j =>
     `<span class="legend-item${j.isCurrent ? ' current' : ''}"><span class="legend-dot" style="background:${j.color}"></span>${esc(j.jobTitle)} <span class="legend-hours">${formatHours(j.totalHours)}</span></span>`
   ).join('');
@@ -235,6 +235,13 @@ async function main() {
 
     render({ window: mergedWindow });
     renderLegend(jobSummaries);
+
+    const jobTitleEl = document.getElementById('job-title');
+    if (jobTitleEl && resp.jobTitle && resp.jobTitle !== 'Unknown Job') {
+      jobTitleEl.textContent = resp.jobTitle;
+      jobTitleEl.style.display = 'block';
+    }
+
     await renderManagement(timesheets, currentTsId);
 
     const entryCount = resp.entries.length;
