@@ -15,7 +15,10 @@ JobX is a student employment timesheet platform by NGWebSolutions, used by many 
 ![preview](preview.png)
 
 ## Installation
+Chrome Web Store
+https://chromewebstore.google.com/detail/jobx-timesheet-hours/bihddccjfhaddcbeokhjhmaceahjieml?pli=1
 
+Or from releases:
 1. [Download](https://github.com/aiexr/jobX-time-extension/releases) the `extension` folder from this repository
 2. Extract to a folder
 3. Open `chrome://extensions` (or `edge://extensions`)
@@ -24,7 +27,6 @@ JobX is a student employment timesheet platform by NGWebSolutions, used by many 
 6. Enable the extension
 
 ## Usage
-
 1. Open your JobX timesheet (URL contains `tsx_stumanagetimesheet.aspx`)
 2. Click the extension icon in the toolbar
 3. The popup shows a bar for each of the 14 days, with hours logged and a running total
