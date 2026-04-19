@@ -19,14 +19,14 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "storage"],
   "host_permissions": [
     "https://*.studentemployment.ngwebsolutions.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://*.studentemployment.ngwebsolutions.com/tsx_stumanagetimesheet.aspx*"
+        "https://*.studentemployment.ngwebsolutions.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

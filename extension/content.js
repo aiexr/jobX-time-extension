@@ -96,13 +96,60 @@
     return { days, startKey: toKey(start) };
   }
 
+  function getTsId() {
+    const params = new URLSearchParams(window.location.search);
+    for (const [key, value] of params) {
+      if (key.toLowerCase() === 'tsid') return value;
+    }
+    return null;
+  }
+
+  function getJobTitle() {
+    const labels = document.querySelectorAll('label');
+    for (const label of labels) {
+      if (label.textContent.trim() === 'Hire Title') {
+        const parent = label.parentElement;
+        if (parent) {
+          const span = parent.querySelector('span');
+          if (span) return span.textContent.trim();
+        }
+      }
+    }
+    return 'Unknown Job';
+  }
+
+  function getPayPeriod() {
+    const h3 = document.querySelector('#pp-tab h3');
+    return h3 ? h3.textContent.trim() : '';
+  }
+
+  async function saveTimesheet(tsId, jobTitle, payPeriod, entries, byDay) {
+    if (!tsId) return;
+    const result = await chrome.storage.local.get('timesheets');
+    const timesheets = result.timesheets || {};
+    timesheets[tsId] = {
+      tsId,
+      jobTitle,
+      payPeriod,
+      lastUpdated: new Date().toISOString(),
+      entries,
+      byDay,
+    };
+    await chrome.storage.local.set({ timesheets });
+  }
+
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg && msg.type === 'GET_TIMESHEET_DATA') {
       try {
         const entries = extractEntries();
         const byDay = aggregate(entries);
-        const window = buildTwoWeekWindow(byDay);
-        sendResponse({ ok: true, entries, byDay, window });
+        const win = buildTwoWeekWindow(byDay);
+        const tsId = getTsId();
+        const jobTitle = getJobTitle();
+        const payPeriod = getPayPeriod();
+        const response = { ok: true, entries, byDay, window: win, tsId, jobTitle, payPeriod };
+        saveTimesheet(tsId, jobTitle, payPeriod, entries, byDay)
+          .finally(() => sendResponse(response));
       } catch (err) {
         sendResponse({ ok: false, error: String(err && err.message || err) });
       }

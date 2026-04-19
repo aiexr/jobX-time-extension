@@ -8,12 +8,15 @@
   --border: #e5e7eb;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
   width: 520px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   color: var(--fg);
   background: var(--bg);
@@ -61,21 +64,24 @@ h1 {
   overflow: hidden;
 }
 
-.day .bar {
+.day .bar-seg {
   width: 100%;
-  background: var(--bar);
   transition: height 0.2s ease;
-  border-radius: 3px 3px 0 0;
 }
 
-.day .bar.zero { background: transparent; }
+.day .bar-seg:last-child {
+  border-radius: 3px 3px 0 0;
+}
 
 .day .hours {
   font-size: 11px;
   font-weight: 600;
 }
 
-.day .hours.zero { color: var(--muted); font-weight: 400; }
+.day .hours.zero {
+  color: var(--muted);
+  font-weight: 400;
+}
 
 .day .weekday {
   font-size: 10px;
@@ -102,4 +108,118 @@ h1 {
   border-top: 1px solid var(--border);
 }
 
-.status.error { color: #dc2626; }
+.status.error {
+  color: #dc2626;
+}
+
+/* Legend */
+.legend {
+  display: none;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.legend-item {
+  white-space: nowrap;
+}
+
+.legend-item:not(:last-child)::after {
+  content: " · ";
+  color: var(--muted);
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.legend-item.current {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.legend-hours {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Stored timesheets management */
+.management {
+  display: none;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.management > summary {
+  padding: 8px 16px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+  user-select: none;
+}
+
+.management > summary:hover {
+  color: var(--fg);
+}
+
+.ts-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.ts-item.ts-current {
+  background: #f0f9ff;
+}
+
+.ts-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ts-title {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-period {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.ts-badge {
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.ts-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ts-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
