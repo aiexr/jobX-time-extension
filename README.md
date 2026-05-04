@@ -26,7 +26,7 @@ Or from releases:
 2. Extract to a folder
 3. Open `chrome://extensions` (or `edge://extensions`)
 4. Enable **Developer mode** (top right toggle)
-5. Click **Load unpacked** and select the folder containing the extension files
+5. Click **Load unpacked** and select the folder `extension`.
 6. Enable the extension
 
 ## Usage

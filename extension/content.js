@@ -123,6 +123,35 @@
     return h3 ? h3.textContent.trim() : '';
   }
 
+  function normalizeJobTitle(title) {
+    return String(title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function parseWage(text) {
+    const n = String(text || '').replace(/[^0-9.]/g, '');
+    const value = Number(n);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return Math.round(value * 100) / 100;
+  }
+
+  function extractDashboardWages() {
+    const table = document.querySelector('#currHireTable');
+    if (!table) return [];
+    const rows = table.querySelectorAll('tbody tr');
+    const wages = [];
+
+    rows.forEach((row) => {
+      const titleEl = row.querySelector('th[data-title="Job Title"] a, th[data-title="Job Title"], th[scope="row"] a, th[scope="row"]');
+      const wageEl = row.querySelector('td[data-title="Wage"]');
+      const jobTitle = titleEl ? titleEl.textContent.trim() : '';
+      const hourlyWage = parseWage(wageEl ? wageEl.textContent : '');
+      if (!jobTitle || hourlyWage === null) return;
+      wages.push({ jobTitle, hourlyWage });
+    });
+
+    return wages;
+  }
+
   async function saveTimesheet(tsId, jobTitle, payPeriod, entries, byDay) {
     if (!tsId) return;
     const result = await chrome.storage.local.get('timesheets');
@@ -138,6 +167,24 @@
     await chrome.storage.local.set({ timesheets });
   }
 
+  async function saveWages(wages) {
+    if (!wages || wages.length === 0) return;
+    const result = await chrome.storage.local.get('wagesByJob');
+    const wagesByJob = result.wagesByJob || {};
+
+    wages.forEach((w) => {
+      const key = normalizeJobTitle(w.jobTitle);
+      if (!key) return;
+      wagesByJob[key] = {
+        jobTitle: w.jobTitle,
+        hourlyWage: w.hourlyWage,
+        lastUpdated: new Date().toISOString(),
+      };
+    });
+
+    await chrome.storage.local.set({ wagesByJob });
+  }
+
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg && msg.type === 'GET_TIMESHEET_DATA') {
       try {
@@ -150,6 +197,17 @@
         const response = { ok: true, entries, byDay, window: win, tsId, jobTitle, payPeriod };
         saveTimesheet(tsId, jobTitle, payPeriod, entries, byDay)
           .finally(() => sendResponse(response));
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err && err.message || err) });
+      }
+      return true;
+    }
+
+    if (msg && msg.type === 'GET_WAGE_DATA') {
+      try {
+        const wages = extractDashboardWages();
+        saveWages(wages)
+          .finally(() => sendResponse({ ok: true, wages, count: wages.length }));
       } catch (err) {
         sendResponse({ ok: false, error: String(err && err.message || err) });
       }

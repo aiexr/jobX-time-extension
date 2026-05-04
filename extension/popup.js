@@ -19,8 +19,17 @@ function formatHours(h) {
   return `${whole}h ${mins}m`;
 }
 
+function formatCurrency(v) {
+  if (!Number.isFinite(v)) return '';
+  return `$${v.toFixed(2)}`;
+}
+
+function normalizeJobTitle(title) {
+  return String(title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function render(data) {
-  const { window, byDay } = data;
+  const { window, estEarnings, hasEstimatedEarnings } = data;
   const days = window.days;
   if (!days.length) {
     setStatus('No entries found on this page.', true);
@@ -31,7 +40,8 @@ function render(data) {
   const workedDays = days.filter((d) => d.hours > 0).length;
   const today = todayKey();
 
-  summaryEl.textContent = `${formatHours(total)} total · ${workedDays} day${workedDays === 1 ? '' : 's'} worked · avg ${formatHours(total / Math.max(workedDays, 1))}/day`;
+  summaryEl.textContent = `${formatHours(total)} total · ${workedDays} day${workedDays === 1 ? '' : 's'} worked · avg ${formatHours(total / Math.max(workedDays, 1))}/day` +
+    (hasEstimatedEarnings ? ` · est ${formatCurrency(estEarnings)}` : '');
 
   chartEl.innerHTML = '';
   for (let i = 0; i < days.length; i++) {
@@ -66,10 +76,18 @@ function render(data) {
       const weekDays = days.slice(i - 6, i + 1);
       const weekTotal = weekDays.reduce((s, wd) => s + wd.hours, 0);
       const weekWorked = weekDays.filter(wd => wd.hours > 0).length;
+      const weekEarnings = weekDays.reduce((sum, wd) => {
+        if (!wd.segments || wd.segments.length === 0) return sum;
+        return sum + wd.segments.reduce((inner, seg) => {
+          if (!Number.isFinite(seg.hourlyWage)) return inner;
+          return inner + (seg.hours * seg.hourlyWage);
+        }, 0);
+      }, 0);
       const weekEl = document.createElement('div');
       weekEl.className = 'week-total';
       weekEl.innerHTML = `<span class="week-total-hours">${formatHours(weekTotal)}</span> this week` +
-        (weekWorked > 0 ? ` · ${weekWorked} day${weekWorked === 1 ? '' : 's'}` : '');
+        (weekWorked > 0 ? ` · ${weekWorked} day${weekWorked === 1 ? '' : 's'}` : '') +
+        (hasEstimatedEarnings ? ` · est ${formatCurrency(weekEarnings)}` : '');
       chartEl.appendChild(weekEl);
     }
   }
@@ -91,9 +109,9 @@ const JOB_COLORS = [
   '#db2777', '#ca8a04', '#0891b2', '#dc2626',
 ];
 
-function mergeTimesheets(currentResp, timesheets, currentTsId) {
+function mergeTimesheets(currentResp, timesheets, wagesByJob, currentTsId) {
   const days = currentResp.window.days.map(d => ({ ...d, segments: [] }));
-  const windowKeys = new Set(days.map(d => d.key));
+  const currentWage = wagesByJob[normalizeJobTitle(currentResp.jobTitle || '')]?.hourlyWage;
 
   // Collect all contributing jobs in stable order: current first, then others
   const jobOrder = [];
@@ -112,7 +130,7 @@ function mergeTimesheets(currentResp, timesheets, currentTsId) {
     let totalH = 0;
     for (const day of days) {
       const h = currentByDay[day.key] || 0;
-      if (h > 0) day.segments.push({ tsId: currentTsId, hours: h, color });
+      if (h > 0) day.segments.push({ tsId: currentTsId, hours: h, color, hourlyWage: currentWage });
       totalH += h;
     }
     jobMap[currentTsId] = {
@@ -121,6 +139,7 @@ function mergeTimesheets(currentResp, timesheets, currentTsId) {
       totalHours: totalH,
       isCurrent: true,
       color,
+      hourlyWage: currentWage,
     };
   }
 
@@ -131,11 +150,12 @@ function mergeTimesheets(currentResp, timesheets, currentTsId) {
     if (!ts || !ts.byDay) continue;
 
     const color = JOB_COLORS[colorIdx++ % JOB_COLORS.length];
+    const hourlyWage = wagesByJob[normalizeJobTitle(ts.jobTitle || '')]?.hourlyWage;
     let jobTotal = 0;
     for (const day of days) {
       const h = ts.byDay[day.key] || 0;
       if (h > 0) {
-        day.segments.push({ tsId, hours: h, color });
+        day.segments.push({ tsId, hours: h, color, hourlyWage });
         day.hours = Math.round((day.hours + h) * 100) / 100;
         jobTotal += h;
       }
@@ -148,13 +168,23 @@ function mergeTimesheets(currentResp, timesheets, currentTsId) {
         totalHours: jobTotal,
         isCurrent: false,
         color,
+        hourlyWage,
       };
     }
   }
 
+  const jobSummaries = jobOrder.filter(id => jobMap[id]).map(id => jobMap[id]);
+  const estEarnings = jobSummaries.reduce((sum, j) => {
+    if (!Number.isFinite(j.hourlyWage)) return sum;
+    return sum + (j.totalHours * j.hourlyWage);
+  }, 0);
+  const hasEstimatedEarnings = jobSummaries.some((j) => Number.isFinite(j.hourlyWage));
+
   return {
     mergedWindow: { days, startKey: currentResp.window.startKey },
-    jobSummaries: jobOrder.filter(id => jobMap[id]).map(id => jobMap[id]),
+    jobSummaries,
+    estEarnings,
+    hasEstimatedEarnings,
   };
 }
 
@@ -167,7 +197,7 @@ function renderLegend(jobSummaries) {
   }
   legendEl.style.display = 'block';
   legendEl.innerHTML = jobSummaries.map(j =>
-    `<span class="legend-item${j.isCurrent ? ' current' : ''}"><span class="legend-dot" style="background:${j.color}"></span>${esc(j.jobTitle)} <span class="legend-hours">${formatHours(j.totalHours)}</span></span>`
+    `<span class="legend-item${j.isCurrent ? ' current' : ''}"><span class="legend-dot" style="background:${j.color}"></span>${esc(j.jobTitle)} <span class="legend-hours">${formatHours(j.totalHours)}</span>${Number.isFinite(j.hourlyWage) ? ` <span class="legend-hours">@ ${formatCurrency(j.hourlyWage)}/h</span>` : ''}</span>`
   ).join('');
 }
 
@@ -215,11 +245,43 @@ async function renderManagement(timesheets, currentTsId) {
 
 async function main() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !tab.url || !tab.url.toLowerCase().includes('tsx_stumanagetimesheet.aspx'.toLowerCase())) {
-    setStatus('Open a timesheet page to see hours.', true);
+  const url = tab && tab.url ? tab.url.toLowerCase() : '';
+
+  if (!tab || !tab.url) {
+    setStatus('Open a timesheet or dashboard page.', true);
     await renderManagement();
     return;
   }
+
+  if (url.includes('jobx_userdashboard.aspx')) {
+    try {
+      const resp = await chrome.tabs.sendMessage(tab.id, { type: 'GET_WAGE_DATA' });
+      if (!resp || !resp.ok) {
+        setStatus(resp && resp.error ? `Error: ${resp.error}` : 'No response from page.', true);
+        return;
+      }
+      summaryEl.textContent = '';
+      chartEl.innerHTML = '';
+      const jobTitleEl = document.getElementById('job-title');
+      if (jobTitleEl) {
+        jobTitleEl.textContent = 'Wage Sync';
+        jobTitleEl.style.display = 'block';
+      }
+      setStatus(`Synced wages for ${resp.count} job${resp.count === 1 ? '' : 's'}. Open a timesheet to see earnings.`, false);
+      await renderManagement();
+      return;
+    } catch (err) {
+      setStatus(`Could not read dashboard: ${err.message}. Try reloading the page.`, true);
+      return;
+    }
+  }
+
+  if (!url.includes('tsx_stumanagetimesheet.aspx')) {
+    setStatus('Open a timesheet or dashboard page.', true);
+    await renderManagement();
+    return;
+  }
+
   try {
     const resp = await chrome.tabs.sendMessage(tab.id, { type: 'GET_TIMESHEET_DATA' });
     if (!resp || !resp.ok) {
@@ -230,10 +292,12 @@ async function main() {
     // Read all stored timesheets and merge
     const stored = await chrome.storage.local.get('timesheets');
     const timesheets = stored.timesheets || {};
+    const wagesResult = await chrome.storage.local.get('wagesByJob');
+    const wagesByJob = wagesResult.wagesByJob || {};
     const currentTsId = resp.tsId;
-    const { mergedWindow, jobSummaries } = mergeTimesheets(resp, timesheets, currentTsId);
+    const { mergedWindow, jobSummaries, estEarnings, hasEstimatedEarnings } = mergeTimesheets(resp, timesheets, wagesByJob, currentTsId);
 
-    render({ window: mergedWindow });
+    render({ window: mergedWindow, estEarnings, hasEstimatedEarnings });
     renderLegend(jobSummaries);
 
     const jobTitleEl = document.getElementById('job-title');
@@ -248,7 +312,9 @@ async function main() {
     const jobCount = jobSummaries.length;
     setStatus(
       `Parsed ${entryCount} entr${entryCount === 1 ? 'y' : 'ies'}` +
-      (jobCount > 1 ? ` \u00b7 ${jobCount} jobs combined` : '') + '.'
+      (jobCount > 1 ? ` \u00b7 ${jobCount} jobs combined` : '') +
+      (hasEstimatedEarnings ? '' : ' · sync wages from dashboard to see earnings.') +
+      '.'
     );
   } catch (err) {
     setStatus(`Could not read page: ${err.message}. Try reloading the timesheet page.`, true);
