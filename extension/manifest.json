@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JobX Timesheet Hours",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Track JobX timesheet hours across multiple jobs with a 2-week chart, totals, and saved timesheets.",
   "action": {
     "default_popup": "popup.html",

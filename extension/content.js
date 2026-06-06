@@ -96,6 +96,24 @@
     return { days, startKey: toKey(start) };
   }
 
+  function latestStoredDate(ts) {
+    const keys = Object.keys(ts && ts.byDay || {}).sort();
+    if (keys.length === 0) return null;
+    const [y, m, d] = keys[keys.length - 1].split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function startOfCurrentWeek() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    start.setDate(start.getDate() - start.getDay());
+    return start;
+  }
+
+  function isSubmittedOrLocked() {
+    return /\b(sent|submitted|approved|locked|pending approval)\b/i.test(document.body.innerText || '');
+  }
+
   function getTsId() {
     const params = new URLSearchParams(window.location.search);
     for (const [key, value] of params) {
@@ -156,6 +174,23 @@
     if (!tsId) return;
     const result = await chrome.storage.local.get('timesheets');
     const timesheets = result.timesheets || {};
+    const startOfWeek = startOfCurrentWeek();
+
+    if (!byDay || Object.keys(byDay).length === 0) {
+      const existing = timesheets[tsId];
+      const latestDate = latestStoredDate(existing);
+      if (latestDate && latestDate < startOfWeek && isSubmittedOrLocked()) {
+        delete timesheets[tsId];
+        await chrome.storage.local.set({ timesheets });
+        return null;
+      }
+      return existing || null;
+    }
+
+    for (const id of Object.keys(timesheets)) {
+      const latestDate = latestStoredDate(timesheets[id]);
+      if (id !== tsId && latestDate && latestDate < startOfWeek) delete timesheets[id];
+    }
     timesheets[tsId] = {
       tsId,
       jobTitle,
@@ -165,6 +200,7 @@
       byDay,
     };
     await chrome.storage.local.set({ timesheets });
+    return timesheets[tsId];
   }
 
   async function saveWages(wages) {
@@ -194,8 +230,20 @@
         const tsId = getTsId();
         const jobTitle = getJobTitle();
         const payPeriod = getPayPeriod();
-        const response = { ok: true, entries, byDay, window: win, tsId, jobTitle, payPeriod };
+        let response = { ok: true, entries, byDay, window: win, tsId, jobTitle, payPeriod };
         saveTimesheet(tsId, jobTitle, payPeriod, entries, byDay)
+          .then((stored) => {
+            if (stored && entries.length === 0 && stored.byDay) {
+              response = {
+                ...response,
+                entries: stored.entries || [],
+                byDay: stored.byDay,
+                window: buildTwoWeekWindow(stored.byDay),
+                jobTitle: stored.jobTitle || jobTitle,
+                payPeriod: stored.payPeriod || payPeriod,
+              };
+            }
+          })
           .finally(() => sendResponse(response));
       } catch (err) {
         sendResponse({ ok: false, error: String(err && err.message || err) });
